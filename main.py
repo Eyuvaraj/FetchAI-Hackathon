@@ -1,31 +1,34 @@
-import os
-from openai import OpenAI
-from uagents import Agent, Context
-OPENAI_KEY = open(".env", "r").read().strip()
- 
-from uagents import Agent, Bureau, Context, Model
- 
-class Message(Model):
+import json
+from fastapi import FastAPI
+from uagents import Model
+from uagents.query import query
+
+
+AGENT_ADDRESS = "agent1qff6gfj65rz50ae2pjpnhrvqu3a5yypsqcmphuagkmxqdpwf3vwv53vu8xv"
+
+
+class UserRequest(Model):
     message: str
- 
-sigmar = Agent(name="sigmar", seed="sigmar recovery phrase")
-slaanesh = Agent(name="slaanesh", seed="slaanesh recovery phrase")
- 
-@sigmar.on_interval(period=3.0)
-async def send_message(ctx: Context):
-   await ctx.send(slaanesh.address, Message(message="hello there slaanesh"))
- 
-@sigmar.on_message(model=Message)
-async def sigmar_message_handler(ctx: Context, sender: str, msg: Message):
-    ctx.logger.info(f"Received message from {sender}: {msg.message}")
- 
-@slaanesh.on_message(model=Message)
-async def slaanesh_message_handler(ctx: Context, sender: str, msg: Message):
-    ctx.logger.info(f"Received message from {sender}: {msg.message}")
-    await ctx.send(sigmar.address, Message(message="hello there sigmar"))
- 
-bureau = Bureau()
-bureau.add(sigmar)
-bureau.add(slaanesh)
-if __name__ == "__main__":
-    bureau.run()
+
+
+async def agent_query(req):
+    response = await query(destination=AGENT_ADDRESS, message=req, timeout=15.0)
+    data = json.loads(response.decode_payload())
+    return data
+
+
+app = FastAPI()
+
+
+@app.get("/")
+def read_root():
+    return "Hello from the Agent controller"
+
+
+@app.post("/endpoint")
+async def make_agent_call(req: UserRequest):
+    try:
+        res = await agent_query(req)
+        return f"successful call - agent response: {res}"
+    except Exception as e:
+        return f"failed call - agent response: {e}"
