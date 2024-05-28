@@ -55,7 +55,7 @@ async def query_handler(ctx: Context, sender: str, _query: TestRequest):
     try:
         chat_msgs = []
 
-        SYSTEM_PROMPT = f"""You're a 3D graphic designer & planner who specializes in creating 3D models schema based on descriptions of objects. Do not assume anything, you have to ask questions about the model, like how it has to be, its approx dimensions, texture, features and other user customizations too. return the response in this json format: {output_struct} only!, don't include any introductory/ending text."""
+        SYSTEM_PROMPT = f"""You're a 3D graphic designer & planner who specializes in creating a minimalist and simple 3D models schema based on descriptions of objects. Do not assume anything, you have to ask questions about the model, like how it has to be, its approx dimensions, texture, features and other user customizations too. return the response in this json format: {output_struct} only!, don't include any introductory/ending text."""
 
         chat_msgs.append(message("system", SYSTEM_PROMPT))
         chat_msgs.append(message("user", _query.message))
@@ -65,9 +65,14 @@ async def query_handler(ctx: Context, sender: str, _query: TestRequest):
 
         try:
             if re.search(r"```json\n", response):
-              response = re.sub(r"```json\n", "", response)
+                response = re.sub(r"```json\n", "", response)
+            elif re.search("```json", response):
+              response = re.sub("```json", "", response)
             if re.search(r"\n```", response):
-              response = re.sub(r"\n```", response)
+               response = re.sub(r"\n```", response)
+            elif re.search("```", response):
+               response = re.sub("```", "", response)
+
             qu = ast.literal_eval(response)
               
             qu = [q for q in qu["questions"]]

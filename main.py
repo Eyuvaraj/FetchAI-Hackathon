@@ -24,11 +24,11 @@ def read_root():
     return "Hello from the Agent controller"
 
 
-@app.post("/endpoint")
+@app.post("/new_request")
 async def make_agent_call(req: TestRequest):
     try:
         res = await agent_query(req)
-        return res
+        return {"data": res}
     except Exception as e:
         print(e)
         return "unsuccessful agent call"
