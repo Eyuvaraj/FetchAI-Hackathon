@@ -5,7 +5,7 @@ import re
 
 OPENAI_KEY = open(".env", "r").read().strip()
 
-client = OpenAI(api_key="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")
+client = OpenAI(api_key=OPENAI_KEY)
 
 def message(role, content):
   return {
@@ -15,7 +15,7 @@ def message(role, content):
 
 def chat(messages):
   completion = client.chat.completions.create(
-    model="gpt-4o",
+    model="gpt-3.5-turbo-0125",
     messages=messages
   )
   response =  completion.choices[0].message.content
@@ -33,7 +33,7 @@ QuestionnaireAgent = Agent(
     name="QuestionnaireAgent",
     seed="questionnaire-Agent-Seed",
     port=8001,
-    endpoint="http://localhost:8001/submit",
+    endpoint="http://localhost:8001/submit_input",
 )
 
 
@@ -55,7 +55,7 @@ async def query_handler(ctx: Context, sender: str, _query: TestRequest):
     try:
         chat_msgs = []
 
-        SYSTEM_PROMPT = f"""You're a 3D graphic designer & planner who specializes in creating a minimalist and simple 3D models schema based on descriptions of objects. Do not assume anything, you have to ask questions about the model, like how it has to be, its approx dimensions, texture, features and other user customizations too. return the response in this json format: {output_struct} only!, don't include any introductory/ending text."""
+        SYSTEM_PROMPT = f"""You're a 3D graphic designer & planner who specializes in creating a minimalist and simple 3D models schema based on descriptions of objects. Do not assume anything, you have to ask questions about the model, like how it has to be, its approx dimensions, texture, features and other user customizations too. return the response in this json format: {output_struct} only!, don't include any introductory/ending text. 4-5 questions should be enough."""
 
         chat_msgs.append(message("system", SYSTEM_PROMPT))
         chat_msgs.append(message("user", _query.message))
