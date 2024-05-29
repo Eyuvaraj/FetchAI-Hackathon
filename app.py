@@ -1,87 +1,92 @@
 import streamlit as st
 import requests
-import uuid
 import ast
 import pyvista as pv
 from stpyvista import stpyvista
 
 st.set_page_config(page_title="3D-Model Buildr", layout="wide", initial_sidebar_state="auto", page_icon="favicon.ico")
 
+# Function to create message dictionary
+def message(role, content):
+    return {
+        "role": role,
+        "content": content
+    }
+
 st.title("3D-Model Buildr")
 
-placeholder = st.empty()
+# Function to handle answering the current question
+def answer_question(answer):
+    current_index = st.session_state.current_question_index
+    st.session_state.answers.append(answer)
+    st.session_state.current_question_index += 1
 
+# Initialize session state variables if they do not exist
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
 if 'question_list' not in st.session_state:
-    st.session_state.question_list = None
+    st.session_state.question_list = []
 if 'current_question_index' not in st.session_state:
     st.session_state.current_question_index = 0
 if 'answers' not in st.session_state:
     st.session_state.answers = []
+if 'form_submitted' not in st.session_state:
+    st.session_state.form_submitted = False
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
 
-with placeholder:
-    user_input = st.chat_input("What do you want to build now?")
+# Placeholder for the user input form
+form_placeholder = st.empty()
 
-    if user_input:
+# User input form
+if not st.session_state.form_submitted:
+    with form_placeholder.form(key="user_input_form"):
+        user_input = st.text_input("What do you want to build now?", st.session_state.user_input)
+        submit_button = st.form_submit_button(label="Submit")
+
+    # Handle form submission
+    if submit_button and user_input:
+        st.session_state.user_input = user_input
         response = requests.post("http://127.0.0.1:8000/new_request", json={"message": user_input})
         if response.ok:
             response_dict = response.json()
             st.session_state.question_list = ast.literal_eval(response_dict["data"])
             st.session_state.current_question_index = 0
             st.session_state.answers = []
-            placeholder.empty()
-        else:
-            st.write("Error:", response.status_code, response.text)
+            st.session_state.form_submitted = True
 
-# Function to handle answering the current question
-def answer_question():
-    current_answer = st.session_state[f'answer_{st.session_state.current_question_index}']
-    st.session_state.answers.append(current_answer)
-    st.session_state.current_question_index += 1
+            # Prompting
+            st.session_state.messages.append(message("user", user_input))
+            st.session_state.messages.append(message("assistant", "I'd be happy to help you with building a 3D model. But before that, can you answer the following questions about the model?"))
+            st.session_state.messages.append(message("user", "Sure, please proceed."))
+            form_placeholder.empty()
 
-if st.session_state.question_list:
+# Display questions and answers
+if st.session_state.user_input and st.session_state.form_submitted:
     current_index = st.session_state.current_question_index
-
     if current_index < len(st.session_state.question_list):
-        st.write("Your Input:", user_input)
+        st.text(f"Your Input: {st.session_state.user_input}")
         current_question = st.session_state.question_list[current_index]
-        st.write(f"Question {current_index + 1}: {current_question}")
-        
+        # st.write(f"Question {current_index + 1}: {current_question}")
+
         answer_key = f'answer_{current_index}'
-        st.text_input("Answer:", key=answer_key)
-        
-        if st.button("Submit Answer"):
-            if st.session_state[answer_key]:
-                answer_question()
-            else:
-                st.write("Please provide an answer.")
 
+        with st.form(key="answer_form"):
+            st.text(f"Question {current_index + 1}: {current_question}")
+            answer = st.text_input("Answer:", key=answer_key)
+            answer_submit_button = st.form_submit_button(label="Submit Answer")
+
+        if answer_submit_button:
+            if answer:
+                answer_question(answer)
+            if answer != "":
+                st.session_state.messages.append(message("assistant", current_question))
+                st.session_state.messages.append(message("user", answer))
+                
     else:
-        st.write("All questions answered. Thank you!")
-        st.write("Your answers were:")
-        for i, answer in enumerate(st.session_state.answers):
-            st.write(f"Answer {i + 1}: {answer}")
-
+        st.write("Thank you!")
+        st.write(st.session_state.messages)
+        response = requests.post("http://127.0.0.1:8000/post_messages", json=st.session_state.messages)
+        print(response.json())
 else:
-    st.write("Please enter something to build.")
-
-
-
-file_path = r"samples\centipede.stl"
-if st.sidebar.button("render model"):
-
-    ## Initialize a plotter object
-    plotter = pv.Plotter(window_size=[400,400])
-
-    ## Load the mesh from file
-    mesh = pv.read(file_path)
-
-
-    ## Add mesh to the plotter
-    plotter.add_mesh(mesh, cmap='bwr')
-
-    ## Final touches
-    plotter.view_isometric()
-    plotter.background_color = 'white'
-
-    ## Send to streamlit
-    stpyvista(plotter, key="pv_cube")
+    st.write("Please enter what you want to build.")
