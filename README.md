@@ -1,9 +1,3 @@
 # Project Name : 3D-Model Buildr
 
-## Description
-
-### Instruction to run the project
-
-### Use-case example
-
-### Special considerations, if any
+## Builds 3d Model based from given text input using LLM.
